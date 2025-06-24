@@ -1,0 +1,347 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator enums {
+  provider = "tsx ./prisma/enum-generator.ts"
+}
+
+model Admin {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  firstName String
+  lastName  String
+  dob       DateTime
+  phoneNo   String
+  street    String
+  city      String
+  state     String
+  zipcode   String
+  gender    Gender
+
+  commission Float @default(0.0)
+
+  role UserRole @default(ADMIN)
+
+  password String
+  email    String @unique
+
+  @@map("admin")
+}
+
+model Customer {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  firstName String
+  lastName  String
+  dob       DateTime
+  phoneNo   String
+  street    String
+  city      String
+  state     String
+  zipcode   String
+  gender    Gender
+
+  email    String @unique
+  password String
+
+  role UserRole @default(CUSTOMER)
+
+  orders    Order[]
+  payments  Payment[]
+  cartItems CartItem[]
+
+  @@map("user")
+}
+
+model Employee {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  firstName String
+  lastName  String
+  dob       DateTime
+  phoneNo   String
+  street    String
+  city      String
+  state     String
+  zipcode   String
+  gender    Gender
+
+  email    String @unique
+  password String
+
+  ssn String
+
+  role UserRole @default(EMPLOYEE)
+
+  hasResetPassword Boolean @default(false)
+
+  deliveries Delivery[]
+
+  @@map("employee")
+}
+
+model EmployeeRegistrationRequest {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  firstName String
+  lastName  String
+  email     String   @unique
+  password  String
+  street    String
+  city      String
+  state     String
+  zipcode   String
+  gender    Gender
+  phoneNo   String
+  dob       DateTime
+  ssn       String
+
+  status EmployeeRegistrationRequestStatus @default(PENDING)
+
+  @@map("employee_registration_request")
+}
+
+model Category {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  name String @unique
+
+  products Product[]
+
+  @@map("category")
+}
+
+model Product {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String
+  image       String
+  type        ClothType
+
+  variants ProductVariant[]
+
+  category   Category? @relation(fields: [categoryId], references: [id])
+  categoryId String?   @db.ObjectId
+
+  @@map("product")
+}
+
+model ProductVariant {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  size           Size
+  color          Color
+  price          Float
+  quantity       Int
+  guarantee      Int            @default(1)
+  targetAudience TargetAudience @map("target_audience")
+
+  order   Order?  @relation(fields: [orderId], references: [id])
+  orderId String? @db.ObjectId
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  productId String  @db.ObjectId
+
+  cartItems CartItem[]
+
+  @@map("variant")
+}
+
+model Order {
+  id         String      @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt  DateTime    @default(now())
+  status     OrderStatus @default(PENDING)
+  type       OrderType   @default(PICKUP)
+  payment    Payment?
+  pickupTime DateTime?
+  street     String?
+  apt        String?
+  city       String?
+  state      String?
+  zipcode    String?
+
+  returnStatus    ReturnStatus?
+  returnMethod    ReturnMethod?
+  returnReason    String?
+  returnRequestAt DateTime?
+
+  productVariants ProductVariant[]
+
+  delivery Delivery?
+
+  user   Customer @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId String   @db.ObjectId
+
+  @@map("order")
+}
+
+model Delivery {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  startTime DateTime?
+  endTime   DateTime?
+  status    DeliveryStatus @default(PENDING)
+  notes     String?
+
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String @unique @db.ObjectId
+
+  deliveryPerson   Employee @relation(fields: [deliveryPersonId], references: [id])
+  deliveryPersonId String   @db.ObjectId
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("delivery")
+}
+
+model Payment {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt     DateTime      @default(now())
+  amount        Float
+  paymentMethod PaymentMethod
+  address       String?
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderId String   @unique @db.ObjectId
+  user    Customer @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId  String   @db.ObjectId
+}
+
+model CartItem {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  quantity Int
+
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String   @db.ObjectId
+
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  variantId String         @db.ObjectId
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cart_item")
+}
+
+enum TargetAudience {
+  MEN
+  WOMEN
+  KIDS
+  UNISEX
+}
+
+enum DeliveryStatus {
+  PENDING
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  REJECTED
+}
+
+enum ClothType {
+  COTTON
+  DENIM
+  POLYESTER
+  SILK
+  WOOL
+  LINEN
+  LEATHER
+  SATIN
+  VELVET
+  CHIFFON
+  FLANNEL
+  GABARDINE
+  JERSEY
+  LACE
+  LYCRA
+  NYLON
+  RAYON
+  SPANDEX
+  TWILL
+}
+
+enum OrderType {
+  DELIVERY
+  PICKUP
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  READY_FOR_PICKUP
+  ASSIGNED_TO_DELIVERY
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
+  EMPLOYEE
+}
+
+enum Size {
+  XSMALL
+  SMALL
+  MEDIUM
+  LARGE
+  XLARGE
+  XXLARGE
+  XXXLARGE
+}
+
+enum Color {
+  RED
+  BLUE
+  GREEN
+  YELLOW
+  BLACK
+  WHITE
+  ORANGE
+  PURPLE
+  PINK
+  BROWN
+  GREY
+  NAVY
+  WHEAT
+  DARK_BROWN
+  CORE_BLACK
+  EARTH
+  SILVER
+  ROYAL_BLUE
+  GRAY
+}
+
+enum ReturnMethod {
+  UPS_STORE
+  IN_STORE
+}
+
+enum ReturnStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RECEIVED
+  REFUNDED
+  CANCELLED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum EmployeeRegistrationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
